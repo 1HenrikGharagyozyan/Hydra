@@ -7,6 +7,7 @@
 
 namespace Hydra
 {
+
 	class LayerStack
 	{
 	public:
@@ -32,5 +33,6 @@ namespace Hydra
 		std::vector<Layer*> m_Layers;
 		unsigned int m_LayerInsertIndex = 0;
 	};
+	
 }
 

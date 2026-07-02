@@ -6,6 +6,7 @@
 
 namespace Hydra
 {
+
 	class Layer
 	{
 	public:
@@ -23,4 +24,5 @@ namespace Hydra
 	protected:
 		std::string m_DebugName;
 	};
+	
 }
