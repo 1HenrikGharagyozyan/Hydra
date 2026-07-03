@@ -1,3 +1,7 @@
+//--------------------------
+// - Hydra 2D -
+// Renderer2D Quad Shader
+// --------------------------
 #type vertex
 #version 450 core
 
