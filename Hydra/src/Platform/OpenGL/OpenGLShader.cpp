@@ -101,8 +101,9 @@ namespace Hydra
     {
         HD_PROFILE_FUNCTION();
 
+        m_FilePath = filepath;
         Utils::CreateCacheDirectoryIfNeeded();
-        
+
         std::string source = ReadFile(filepath);
         auto shaderSources = PreProcess(source);
 
