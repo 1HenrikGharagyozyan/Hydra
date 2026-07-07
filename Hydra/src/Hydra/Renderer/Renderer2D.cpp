@@ -106,12 +106,12 @@ namespace Hydra
 
         s_Data.QuadVertexBuffer = VertexBuffer::Create(s_Data.MaxVertices * sizeof(QuadVertex));
         s_Data.QuadVertexBuffer->SetLayout({
-                { ShaderDataType::Float3, "a_Position" },
-                { ShaderDataType::Float4, "a_Color" },
-                { ShaderDataType::Float2, "a_TexCoord" },
-                { ShaderDataType::Float, "a_TexIndex" },
-                { ShaderDataType::Float, "a_TilingFactor" },
-                { ShaderDataType::Int, "a_EntityID" }
+                { ShaderDataType::Float3, "a_Position"     },
+                { ShaderDataType::Float4, "a_Color"        },
+                { ShaderDataType::Float2, "a_TexCoord"     },
+                { ShaderDataType::Float,  "a_TexIndex"     },
+                { ShaderDataType::Float,  "a_TilingFactor" },
+                { ShaderDataType::Int,    "a_EntityID"     }
             });
         s_Data.QuadVertexArray->AddVertexBuffer(s_Data.QuadVertexBuffer);
 
@@ -174,8 +174,6 @@ namespace Hydra
             samplers[i] = i;
 
         s_Data.QuadShader = Shader::Create("assets/shaders/Renderer2D_Quad.glsl");
-        //s_Data.QuadShader->Bind();
-        //s_Data.QuadShader->SetIntArray("u_Textures", samplers, s_Data.MaxTextureSlots);
         s_Data.CircleShader = Shader::Create("assets/shaders/Renderer2D_Circle.glsl");
         s_Data.LineShader = Shader::Create("assets/shaders/Renderer2D_Line.glsl");
 
