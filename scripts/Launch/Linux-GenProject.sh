@@ -6,7 +6,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
 
 echo "=== Building Hydra Engine (Debug) ==="
-if ! make config=debug; then
+if ! (premake5 gmake2 && make clean && make config=debug); then
     echo "Build failed! Exiting..."
     exit 1
 fi

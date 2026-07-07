@@ -48,9 +48,10 @@ namespace Hydra
         {
             uint32_t DrawCalls = 0;
             uint32_t QuadCount = 0;
+            uint32_t CircleCount = 0;
 
-            uint32_t GetTotalVertexCount() const { return QuadCount * 4; }
-            uint32_t GetTotalIndexCount() const { return QuadCount * 6; }
+            uint32_t GetTotalVertexCount() const { return (QuadCount + CircleCount) * 4; }
+            uint32_t GetTotalIndexCount() const { return (QuadCount + CircleCount) * 6; }
         };
 
         static void ResetStats();
