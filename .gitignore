@@ -21,7 +21,7 @@ vendor/premake/bin/LICENSE.txt
 # IDEs and Workspace Configurations
 .vs/
 .vscode/
-*.user
+*.userf
 *.suo
 .VSCodeCounter/
 
@@ -48,4 +48,7 @@ HydraEditor/assets/cache/
 *.log
 
 # Profiling Logs
-HydraProfile-*.json__pycache__/
+HydraProfile-*.json
+*Profile-*.json
+
+
