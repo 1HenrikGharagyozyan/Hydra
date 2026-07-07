@@ -43,25 +43,25 @@ void main()
 #type fragment
 #version 450 core
 
-layout(location = 0) out vec4 color;
-layout(location = 1) out int color2;
+layout(location = 0) out vec4 o_Color;
+layout(location = 1) out int o_EntityID;
 
 struct VertexOutput
 {
     vec4 Color;
     vec2 TexCoord;
-    float TexIndex;
     float TailingFactor;
 };
 
 layout (location = 0) in VertexOutput v_Output;
+layout (location = 3) in flat float v_TexIndex;
 layout (location = 4) in flat int v_EntityID;
 
 layout (binding = 0) uniform sampler2D u_Textures[32];
 
 void main()
 {
-    color = texture(u_Textures[int(v_Output.TexIndex)], v_Output.TexCoord * v_Output.TailingFactor) * v_Output.Color;
+    o_Color = texture(u_Textures[int(v_Output.TexIndex)], v_Output.TexCoord * v_Output.TailingFactor) * v_Output.Color;
 
-    color2 = v_EntityID;
+    o_EntityID = v_EntityID;
 }
