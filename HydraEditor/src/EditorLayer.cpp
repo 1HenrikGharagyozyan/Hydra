@@ -45,6 +45,8 @@ namespace Hydra
 		m_EditorScene = CreateRef<Scene>();
 		m_ActiveScene = m_EditorScene;
 
+		m_SceneHierarchyPanel.SetContext(m_ActiveScene);
+
 		auto commandLineArgs = Application::Get().GetCommandLineArgs();
 		if (commandLineArgs.Count > 1)
 		{
@@ -266,6 +268,7 @@ namespace Hydra
 		ImGui::Text("Renderer2D Stats:");
 		ImGui::Text("Draw Calls: %d", stats.DrawCalls);
 		ImGui::Text("Quads: %d", stats.QuadCount);
+		ImGui::Text("Circles: %d", stats.CircleCount);
 		ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
 		ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
 			
@@ -372,7 +375,7 @@ namespace Hydra
 
 		float size = ImGui::GetWindowHeight() - 4.0f;
 		Ref<Texture2D> icon = m_SceneState == SceneState::Edit ? m_IconPlay : m_IconStop;
-		ImGui::SetCursorPosX((ImGui::GetWindowContentRegionMax().x * 0.5f) - (size * 0.5f));
+		ImGui::SetCursorPos(ImVec2((ImGui::GetWindowWidth() - size) * 0.5f, (ImGui::GetWindowHeight() - size) * 0.5f));
 		if (ImGui::ImageButton("##ToolbarButton", (ImTextureID)(uintptr_t)icon->GetRendererID(), ImVec2(size, size), ImVec2(0, 0), ImVec2(1, 1)))
 		{
 			if (m_SceneState == SceneState::Edit)

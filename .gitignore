@@ -48,4 +48,4 @@ HydraEditor/assets/cache/
 *.log
 
 # Profiling Logs
-HydraProfile-*.json
+HydraProfile-*.json__pycache__/

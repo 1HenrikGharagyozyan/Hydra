@@ -163,6 +163,7 @@ namespace Hydra
         HD_PROFILE_FUNCTION();
 
         delete[] s_Data.QuadVertexBufferBase;
+        delete[] s_Data.CircleVertexBufferBase;
     }
 
     void Renderer2D::BeginScene(const OrthographicCamera& camera)
@@ -392,9 +393,8 @@ namespace Hydra
     {
         HD_PROFILE_FUNCTION();
 
-		// TODO: implement for circles
-		// if (s_Data.QuadIndexCount >= Renderer2DData::MaxIndices)
-		// 	NextBatch();
+		if (s_Data.CircleIndexCount >= Renderer2DData::MaxIndices)
+			NextBatch();
 
 		for (size_t i = 0; i < 4; i++)
 		{
@@ -409,7 +409,7 @@ namespace Hydra
 
 		s_Data.CircleIndexCount += 6;
 
-		s_Data.Stats.QuadCount++;
+		s_Data.Stats.CircleCount++;
     }
 
     void Renderer2D::DrawSprite(const glm::mat4& transform, SpriteRendererComponent& src, int entityID)
