@@ -47,7 +47,16 @@ namespace Hydra
             auto view = m_Registry.view<Rigidbody2DComponent>();
             for (auto e : view)
             {
+                Entity entity = { e, this };
                 auto& rb2d = view.get<Rigidbody2DComponent>(e);
+
+                if (entity.HasComponent<BoxCollider2DComponent>())
+                {
+                    auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
+                    delete (b2ShapeId*)bc2d.RuntimeFixture;
+                    bc2d.RuntimeFixture = nullptr;
+                }
+
                 delete (b2BodyId*)rb2d.RuntimeBody;
                 rb2d.RuntimeBody = nullptr;
             }
@@ -106,25 +115,39 @@ namespace Hydra
             rb2d.RuntimeBody = nullptr;
 
             b2BodyDef bodyDef = b2DefaultBodyDef();
-            bodyDef.type = (rb2d.Type == Rigidbody2DComponent::BodyType::Static) ? b2_staticBody : 
-                        (rb2d.Type == Rigidbody2DComponent::BodyType::Dynamic) ? b2_dynamicBody : b2_kinematicBody;
-            
+            bodyDef.type = Rigidbody2DTypeToBox2DBodyType(rb2d.Type);
+
+            if (bodyDef.type == b2_dynamicBody)
+                bodyDef.isBullet = true;
+
             bodyDef.position = { transform.Translation.x, transform.Translation.y };
             bodyDef.rotation = b2MakeRot(transform.Rotation.z);
-            
+            bodyDef.fixedRotation = rb2d.FixedRotation;
+
             b2BodyId bodyId = b2CreateBody(m_PhysicsWorld, &bodyDef);
-            rb2d.RuntimeBody = new b2BodyId(bodyId); // Безопасно сохраняем всю структуру!
+            rb2d.RuntimeBody = new b2BodyId(bodyId);
 
             if (entity.HasComponent<BoxCollider2DComponent>())
             {
                 auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-                b2Polygon shape = b2MakeBox(bc2d.Size.x * transform.Scale.x * 0.5f, bc2d.Size.y * transform.Scale.y * 0.5f);
-                
+                bc2d.RuntimeFixture = nullptr;
+
+                // bc2d.Size is already a half-extent — do NOT multiply by 0.5 again.
+                b2Vec2 center = { bc2d.Offset.x, bc2d.Offset.y };
+                b2Polygon shape = b2MakeOffsetBox(
+                    bc2d.Size.x * transform.Scale.x,
+                    bc2d.Size.y * transform.Scale.y,
+                    center, 0.0f);
+                shape.radius = 0.03f;
+
                 b2ShapeDef shapeDef = b2DefaultShapeDef();
-                // shapeDef.density = bc2d.Density;
-                // shapeDef.friction = bc2d.Friction;
-                
-                b2CreatePolygonShape(bodyId, &shapeDef, &shape);
+                shapeDef.density = bc2d.Density;
+
+                shapeDef.friction = bc2d.Friction;
+                shapeDef.restitution = bc2d.Restitution;
+
+                b2ShapeId shapeId = b2CreatePolygonShape(bodyId, &shapeDef, &shape);
+                bc2d.RuntimeFixture = new b2ShapeId(shapeId);
             }
         }
 	}
@@ -134,7 +157,19 @@ namespace Hydra
         auto view = m_Registry.view<Rigidbody2DComponent>();
         for (auto e : view)
         {
+            Entity entity = { e, this };
             auto& rb2d = view.get<Rigidbody2DComponent>(e);
+
+            if (entity.HasComponent<BoxCollider2DComponent>())
+            {
+                auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
+                if (bc2d.RuntimeFixture)
+                {
+                    delete (b2ShapeId*)bc2d.RuntimeFixture;
+                    bc2d.RuntimeFixture = nullptr;
+                }
+            }
+
             if (rb2d.RuntimeBody)
             {
                 delete (b2BodyId*)rb2d.RuntimeBody;
@@ -166,12 +201,10 @@ namespace Hydra
         }
 
         // Physics
+        if (!B2_IS_NULL(m_PhysicsWorld))
         {
-            if (B2_IS_NULL(m_PhysicsWorld))
-                return;
-
-            const float timeStep = ts;
-            const int32_t subStepCount = 4; // v3 рекомендует субстепы
+            const float timeStep = glm::min((float)ts, 1.0f / 30.0f);
+            const int32_t subStepCount = 8;
             b2World_Step(m_PhysicsWorld, timeStep, subStepCount);
 
             auto view = m_Registry.view<Rigidbody2DComponent>();
@@ -182,15 +215,15 @@ namespace Hydra
                 auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
 
                 if (!rb2d.RuntimeBody)
-                    continue; // Если тело не создано, пропускаем
+                    continue;
 
-                b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody; // Достаем структуру целиком
-                
+                b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody;
+
                 if (b2Body_IsValid(bodyId))
                 {
                     b2Vec2 position = b2Body_GetPosition(bodyId);
                     float angle = b2Rot_GetAngle(b2Body_GetRotation(bodyId));
-                    
+
                     transform.Translation.x = position.x;
                     transform.Translation.y = position.y;
                     transform.Rotation.z = angle;
@@ -221,6 +254,9 @@ namespace Hydra
             Renderer2D::BeginScene(*mainCamera, cameraTransform);
 
             // Draw sprites
+            // NOTE: This group owns TransformComponent storage. Do NOT create a second owning
+            // group<TransformComponent> anywhere else in this registry — EnTT will assert at runtime.
+            // Circle rendering intentionally uses a non-owning view for this reason.
             {
                 auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
                 for (auto entity : group)
