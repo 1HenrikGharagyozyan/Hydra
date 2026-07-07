@@ -5,8 +5,14 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Navigate to the root of the Hydra project
 cd "$SCRIPT_DIR/../.."
 
+echo "=== Generating project files ==="
+if ! premake5 gmake2; then
+    echo "Project generation failed! Exiting..."
+    exit 1
+fi
+
 echo "=== Building Hydra Engine (Debug) ==="
-if ! (premake5 gmake2 && make clean && make config=debug); then
+if ! make config=debug -j"$(nproc)"; then
     echo "Build failed! Exiting..."
     exit 1
 fi
