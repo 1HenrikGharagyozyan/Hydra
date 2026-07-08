@@ -40,7 +40,7 @@ namespace Hydra
     struct LineVertex
     {
         glm::vec3 Position;
-        glm::vec3 Color;
+        glm::vec4 Color;
 
         // Editor-only
         int EntityID;
@@ -194,6 +194,7 @@ namespace Hydra
 
         delete[] s_Data.QuadVertexBufferBase;
         delete[] s_Data.CircleVertexBufferBase;
+        delete[] s_Data.LineVertexBufferBase;
     }
 
     void Renderer2D::BeginScene(const OrthographicCamera& camera)
@@ -281,12 +282,12 @@ namespace Hydra
         if (s_Data.LineVertexCount)
         {
             uint32_t dataSize = (uint32_t)((uint8_t*)s_Data.LineVertexBufferPtr - (uint8_t*)s_Data.LineVertexBufferBase);
-            s_Data.CircleVertexBuffer->SetData(s_Data.LineVertexBufferBase, dataSize);
+            s_Data.LineVertexBuffer->SetData(s_Data.LineVertexBufferBase, dataSize);
 
             // Draw
-            s_Data.CircleShader->Bind();
+            s_Data.LineShader->Bind();
             RenderCommand::SetLineWidth(s_Data.LineWidth);
-            RenderCommand::DrawIndexed(s_Data.LineVertexArray, s_Data.LineVertexCount);
+            RenderCommand::DrawLines(s_Data.LineVertexArray, s_Data.LineVertexCount);
 
             s_Data.Stats.DrawCalls++;
         }
@@ -460,6 +461,9 @@ namespace Hydra
 
     void Renderer2D::DrawLine(const glm::vec3& p0, const glm::vec3& p1, const glm::vec4& color, int entityID)
     {
+        if (s_Data.LineVertexCount + 2 > Renderer2DData::MaxVertices)
+            NextBatch();
+
         s_Data.LineVertexBufferPtr->Position = p0;
 		s_Data.LineVertexBufferPtr->Color = color;
 		s_Data.LineVertexBufferPtr->EntityID = entityID;
@@ -505,7 +509,6 @@ namespace Hydra
         else
             DrawQuad(transform, src.Color, entityID);
     }
-
 
 	float Renderer2D::GetLineWidth()
 	{
