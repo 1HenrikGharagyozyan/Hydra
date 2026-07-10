@@ -179,18 +179,6 @@ namespace Hydra
 
                 b2ShapeId shapeId = b2CreateCircleShape(bodyId, &shapeDef, &circle);
                 cc2d.RuntimeFixture = new b2ShapeId(shapeId);
-
-				// b2Circle circleShape;
-				// circleShape.m_p.Set(cc2d.Offset.x, cc2d.Offset.y);
-				// circleShape.m_radius = cc2d.Radius;
-
-				// b2FixtureDef fixtureDef;
-				// fixtureDef.shape = &circleShape;
-				// fixtureDef.density = cc2d.Density;
-				// fixtureDef.friction = cc2d.Friction;
-				// fixtureDef.restitution = cc2d.Restitution;
-				// fixtureDef.restitutionThreshold = cc2d.RestitutionThreshold;
-				// body->CreateFixture(&fixtureDef);
 			}
         }
 	}
