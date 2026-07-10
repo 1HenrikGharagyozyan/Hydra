@@ -7,7 +7,7 @@ import Utils
 
 
 class PremakeConfiguration:
-    premakeVersion = "5.0.0-alpha16"
+    premakeVersion = "5.0.0-beta1"
     premakeDirectory = "./vendor/premake/bin"
     premakeLicenseUrl = "https://raw.githubusercontent.com/premake/premake-core/master/LICENSE.txt"
 
