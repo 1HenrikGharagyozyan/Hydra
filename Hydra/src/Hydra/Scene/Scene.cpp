@@ -53,8 +53,21 @@ namespace Hydra
                 if (entity.HasComponent<BoxCollider2DComponent>())
                 {
                     auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-                    delete (b2ShapeId*)bc2d.RuntimeFixture;
-                    bc2d.RuntimeFixture = nullptr;
+                    if (bc2d.RuntimeFixture)
+                    {
+                        delete (b2ShapeId*)bc2d.RuntimeFixture;
+                        bc2d.RuntimeFixture = nullptr;
+                    }
+                }
+
+                if (entity.HasComponent<CircleCollider2DComponent>())
+                {
+                    auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
+                    if (cc2d.RuntimeFixture)
+                    {
+                        delete (b2ShapeId*)cc2d.RuntimeFixture;
+                        cc2d.RuntimeFixture = nullptr;
+                    }
                 }
 
                 delete (b2BodyId*)rb2d.RuntimeBody;
@@ -149,6 +162,24 @@ namespace Hydra
                 b2ShapeId shapeId = b2CreatePolygonShape(bodyId, &shapeDef, &shape);
                 bc2d.RuntimeFixture = new b2ShapeId(shapeId);
             }
+
+            if (entity.HasComponent<CircleCollider2DComponent>())
+			{
+				auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
+                cc2d.RuntimeFixture = nullptr;
+
+                b2Circle circle;
+                circle.center = { cc2d.Offset.x, cc2d.Offset.y };
+                circle.radius = cc2d.Radius * transform.Scale.x; // TODO: Support non-uniform scaling
+
+                b2ShapeDef shapeDef = b2DefaultShapeDef();
+                shapeDef.density = cc2d.Density;
+                shapeDef.friction = cc2d.Friction;
+                shapeDef.restitution = cc2d.Restitution;
+
+                b2ShapeId shapeId = b2CreateCircleShape(bodyId, &shapeDef, &circle);
+                cc2d.RuntimeFixture = new b2ShapeId(shapeId);
+			}
         }
 	}
 
@@ -167,6 +198,16 @@ namespace Hydra
                 {
                     delete (b2ShapeId*)bc2d.RuntimeFixture;
                     bc2d.RuntimeFixture = nullptr;
+                }
+            }
+            
+            if (entity.HasComponent<CircleCollider2DComponent>())
+            {
+                auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
+                if (cc2d.RuntimeFixture)
+                {
+                    delete (b2ShapeId*)cc2d.RuntimeFixture;
+                    cc2d.RuntimeFixture = nullptr;
                 }
             }
 
@@ -338,6 +379,7 @@ namespace Hydra
         CopyComponentIfExists<NativeScriptComponent>(newEntity, entity);
         CopyComponentIfExists<Rigidbody2DComponent>(newEntity, entity);
         CopyComponentIfExists<BoxCollider2DComponent>(newEntity, entity);
+        CopyComponentIfExists<CircleCollider2DComponent>(newEntity, entity);
     }
 
     Entity Scene::GetPrimaryCameraEntity()
@@ -404,5 +446,10 @@ namespace Hydra
 	void Scene::OnComponentAdded<BoxCollider2DComponent>(Entity entity, BoxCollider2DComponent& component)
 	{
 	}
+
+    template<>
+    void Scene::OnComponentAdded<CircleCollider2DComponent>(Entity entity, CircleCollider2DComponent& component)
+    {
+    }
 
 }
