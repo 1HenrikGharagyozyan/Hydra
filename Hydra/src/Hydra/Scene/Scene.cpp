@@ -44,36 +44,7 @@ namespace Hydra
     {
         if (!B2_IS_NULL(m_PhysicsWorld))
         {
-            auto view = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& rb2d = view.get<Rigidbody2DComponent>(e);
-
-                if (entity.HasComponent<BoxCollider2DComponent>())
-                {
-                    auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-                    if (bc2d.RuntimeFixture)
-                    {
-                        delete (b2ShapeId*)bc2d.RuntimeFixture;
-                        bc2d.RuntimeFixture = nullptr;
-                    }
-                }
-
-                if (entity.HasComponent<CircleCollider2DComponent>())
-                {
-                    auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
-                    if (cc2d.RuntimeFixture)
-                    {
-                        delete (b2ShapeId*)cc2d.RuntimeFixture;
-                        cc2d.RuntimeFixture = nullptr;
-                    }
-                }
-
-                delete (b2BodyId*)rb2d.RuntimeBody;
-                rb2d.RuntimeBody = nullptr;
-            }
-            b2DestroyWorld(m_PhysicsWorld);
+            OnPhysics2DStop();
         }
     }
 
@@ -185,35 +156,7 @@ namespace Hydra
         }
 
         // Physics
-        if (!B2_IS_NULL(m_PhysicsWorld))
-        {
-            const float timeStep = glm::min((float)ts, 1.0f / 30.0f);
-            const int32_t subStepCount = 8;
-            b2World_Step(m_PhysicsWorld, timeStep, subStepCount);
-
-            auto view = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetComponent<TransformComponent>();
-                auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-
-                if (!rb2d.RuntimeBody)
-                    continue;
-
-                b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody;
-
-                if (b2Body_IsValid(bodyId))
-                {
-                    b2Vec2 position = b2Body_GetPosition(bodyId);
-                    float angle = b2Rot_GetAngle(b2Body_GetRotation(bodyId));
-
-                    transform.Translation.x = position.x;
-                    transform.Translation.y = position.y;
-                    transform.Rotation.z = angle;
-                }
-            }
-        }
+        StepPhysics2D(ts);
 
         // Render 2D
         Camera* mainCamera = nullptr;
@@ -269,35 +212,7 @@ namespace Hydra
     void Scene::OnUpdateSimulation(Timestep ts, EditorCamera & camera)
     {
         // Physics
-        if (!B2_IS_NULL(m_PhysicsWorld))
-        {
-            const float timeStep = glm::min((float)ts, 1.0f / 30.0f);
-            const int32_t subStepCount = 8;
-            b2World_Step(m_PhysicsWorld, timeStep, subStepCount);
-
-            auto view = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetComponent<TransformComponent>();
-                auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-
-                if (!rb2d.RuntimeBody)
-                    continue;
-
-                b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody;
-
-                if (b2Body_IsValid(bodyId))
-                {
-                    b2Vec2 position = b2Body_GetPosition(bodyId);
-                    float angle = b2Rot_GetAngle(b2Body_GetRotation(bodyId));
-
-                    transform.Translation.x = position.x;
-                    transform.Translation.y = position.y;
-                    transform.Rotation.z = angle;
-                }
-            }
-        }
+        StepPhysics2D(ts);
 
         // Render
         RenderScene(camera);
@@ -487,6 +402,39 @@ namespace Hydra
         }
 
         Renderer2D::EndScene();
+    }
+
+    void Scene::StepPhysics2D(Timestep ts)
+    {
+        if (B2_IS_NULL(m_PhysicsWorld))
+            return;
+
+        const float timeStep = glm::min((float)ts, 1.0f / 30.0f);
+        const int32_t subStepCount = 8;
+        b2World_Step(m_PhysicsWorld, timeStep, subStepCount);
+
+        auto view = m_Registry.view<Rigidbody2DComponent>();
+        for (auto e : view)
+        {
+            Entity entity = { e, this };
+            auto& transform = entity.GetComponent<TransformComponent>();
+            auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+
+            if (!rb2d.RuntimeBody)
+                continue;
+
+            b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody;
+
+            if (b2Body_IsValid(bodyId))
+            {
+                b2Vec2 position = b2Body_GetPosition(bodyId);
+                float angle = b2Rot_GetAngle(b2Body_GetRotation(bodyId));
+
+                transform.Translation.x = position.x;
+                transform.Translation.y = position.y;
+                transform.Rotation.z = angle;
+            }
+        }
     }
 
     template<typename T>

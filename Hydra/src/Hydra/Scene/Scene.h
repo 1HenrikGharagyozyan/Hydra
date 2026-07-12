@@ -56,6 +56,8 @@ namespace Hydra
 
         void RenderScene(EditorCamera& camera);
 
+        void StepPhysics2D(Timestep ts);
+
     private:
         entt::registry m_Registry;
         uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
