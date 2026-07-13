@@ -209,7 +209,7 @@ namespace Hydra
         }
     }
 
-    void Scene::OnUpdateSimulation(Timestep ts, EditorCamera & camera)
+    void Scene::OnUpdateSimulation(Timestep ts, EditorCamera& camera)
     {
         // Physics
         StepPhysics2D(ts);
