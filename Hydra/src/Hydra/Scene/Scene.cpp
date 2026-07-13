@@ -44,36 +44,22 @@ namespace Hydra
     {
         if (!B2_IS_NULL(m_PhysicsWorld))
         {
-            auto view = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& rb2d = view.get<Rigidbody2DComponent>(e);
+            OnPhysics2DStop();
+        }
+    }
 
-                if (entity.HasComponent<BoxCollider2DComponent>())
-                {
-                    auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-                    if (bc2d.RuntimeFixture)
-                    {
-                        delete (b2ShapeId*)bc2d.RuntimeFixture;
-                        bc2d.RuntimeFixture = nullptr;
-                    }
-                }
+    template<typename Component>
+    static void CopyComponent(entt::registry& dst, entt::registry& src, const std::unordered_map<UUID, entt::entity>& enttMap)
+    {
+        auto view = src.view<Component>();
+        for (auto e : view)
+        {
+            UUID uuid = src.get<IDComponent>(e).ID;
+            HD_CORE_ASSERT(enttMap.find(uuid) != enttMap.end(), "Entity missing from copy map!");
+            entt::entity dstEnttID = enttMap.at(uuid);
 
-                if (entity.HasComponent<CircleCollider2DComponent>())
-                {
-                    auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
-                    if (cc2d.RuntimeFixture)
-                    {
-                        delete (b2ShapeId*)cc2d.RuntimeFixture;
-                        cc2d.RuntimeFixture = nullptr;
-                    }
-                }
-
-                delete (b2BodyId*)rb2d.RuntimeBody;
-                rb2d.RuntimeBody = nullptr;
-            }
-            b2DestroyWorld(m_PhysicsWorld);
+            auto& component = src.get<Component>(e);
+            dst.emplace_or_replace<Component>(dstEnttID, component);
         }
     }
 
@@ -83,13 +69,30 @@ namespace Hydra
         newScene->m_ViewportWidth = other->m_ViewportWidth;
         newScene->m_ViewportHeight = other->m_ViewportHeight;
 
-        std::stringstream ss;
-        SceneSerializer serializer(other);
-        serializer.SerializeToStream(ss);
-        
-        SceneSerializer deserializer(newScene);
-        deserializer.DeserializeFromStream(ss);
-        
+        auto& srcSceneRegistry = other->m_Registry;
+        auto& dstSceneRegistry = newScene->m_Registry;
+        std::unordered_map<UUID, entt::entity> enttMap;
+
+        // Создаем сущности в новой сцене
+        auto idView = srcSceneRegistry.view<IDComponent>();
+        for (auto e : idView)
+        {
+            UUID uuid = srcSceneRegistry.get<IDComponent>(e).ID;
+            const auto& name = srcSceneRegistry.get<TagComponent>(e).Tag;
+            Entity newEntity = newScene->CreateEntityWithUUID(uuid, name);
+            enttMap[uuid] = (entt::entity)newEntity;
+        }
+
+        // Копируем компоненты напрямую в памяти
+        CopyComponent<TransformComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<SpriteRendererComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<CircleRendererComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<CameraComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<NativeScriptComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<Rigidbody2DComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<BoxCollider2DComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        CopyComponent<CircleCollider2DComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+
         return newScene;
     }
 
@@ -115,7 +118,157 @@ namespace Hydra
 
     void Scene::OnRuntimeStart()
 	{
-		b2WorldDef worldDef = b2DefaultWorldDef();
+        OnPhysics2DStart();
+	}
+
+	void Scene::OnRuntimeStop()
+	{
+        OnPhysics2DStop();
+	}
+
+    void Scene::OnSimulationStart()
+    {
+        OnPhysics2DStart();
+    }
+
+    void Scene::OnSimulationStop()
+    {
+        OnPhysics2DStop();
+    }
+
+    void Scene::OnUpdateRuntime(Timestep ts)
+    {
+
+        // Update Scripts
+        {
+            m_Registry.view<NativeScriptComponent>().each([=](auto entity, auto& nsc)
+            {
+                // TODO: Move to Scene::OnScenePlay
+                if (!nsc.Instance)
+                {
+                    nsc.Instance = nsc.InstantiateScript();
+                    nsc.Instance->m_Entity = Entity{ entity, this };
+                    nsc.Instance->OnCreate();
+                }
+
+                nsc.Instance->OnUpdate(ts); 
+            });
+        }
+
+        // Physics
+        StepPhysics2D(ts);
+
+        // Render 2D
+        Camera* mainCamera = nullptr;
+        glm::mat4 cameraTransform;
+        {
+            auto view = m_Registry.view<TransformComponent, CameraComponent>();
+            for (auto entity : view)
+            {
+                auto [transform, camera] = view.get<TransformComponent, CameraComponent>(entity);
+
+                if (camera.Primary)
+                {
+                    mainCamera = &camera.Camera;
+                    cameraTransform = transform.GetTransform();
+                    break;
+                }
+            }
+        }
+
+        if (mainCamera)
+        {
+            Renderer2D::BeginScene(*mainCamera, cameraTransform);
+
+            // Draw sprites
+            // NOTE: This group owns TransformComponent storage. Do NOT create a second owning
+            // group<TransformComponent> anywhere else in this registry — EnTT will assert at runtime.
+            // Circle rendering intentionally uses a non-owning view for this reason.
+            {
+                auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
+                for (auto entity : group)
+                {
+                    auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
+
+                    Renderer2D::DrawSprite(transform.GetTransform(), sprite, (int)entity);
+                }
+            }
+
+            // Draw circles
+            {
+                auto view = m_Registry.view<TransformComponent, CircleRendererComponent>();
+                for (auto entity : view)
+                {
+                    auto [transform, circle] = view.get<TransformComponent, CircleRendererComponent>(entity);
+
+                    Renderer2D::DrawCircle(transform.GetTransform(), circle.Color, circle.Thickness, circle.Fade, (int)entity);
+                }
+            }
+
+            Renderer2D::EndScene();
+        }
+    }
+
+    void Scene::OnUpdateSimulation(Timestep ts, EditorCamera& camera)
+    {
+        // Physics
+        StepPhysics2D(ts);
+
+        // Render
+        RenderScene(camera);
+    }
+
+    void Scene::OnUpdateEditor(Timestep ts, EditorCamera& camera)
+    {
+        // Render
+        RenderScene(camera);
+    }   
+
+    void Scene::OnViewportResize(uint32_t width, uint32_t height)
+    {
+        m_ViewportWidth = width;
+        m_ViewportHeight = height;
+
+        // Resize our non-FixedAspectRatio cameras
+        auto view = m_Registry.view<CameraComponent>();
+        for (auto entity : view)
+        {
+            auto& cameraComponent = view.get<CameraComponent>(entity);
+            if (!cameraComponent.FixedAspectRatio)
+                cameraComponent.Camera.SetViewportSize(width, height);
+        }
+    }
+
+    void Scene::DuplicateEntity(Entity entity)
+    {
+        std::string name = entity.GetName();
+        Entity newEntity = CreateEntity(name);
+
+        CopyComponentIfExists<TransformComponent>(newEntity, entity);
+        CopyComponentIfExists<SpriteRendererComponent>(newEntity, entity);
+        CopyComponentIfExists<CircleRendererComponent>(newEntity, entity);
+        CopyComponentIfExists<CameraComponent>(newEntity, entity);
+        CopyComponentIfExists<NativeScriptComponent>(newEntity, entity);
+        CopyComponentIfExists<Rigidbody2DComponent>(newEntity, entity);
+        CopyComponentIfExists<BoxCollider2DComponent>(newEntity, entity);
+        CopyComponentIfExists<CircleCollider2DComponent>(newEntity, entity);
+    }
+
+    Entity Scene::GetPrimaryCameraEntity()
+    {
+        auto view = m_Registry.view<CameraComponent>();
+        for (auto entity : view)
+        {
+            const auto& cameraComponent = view.get<CameraComponent>(entity);
+            if (cameraComponent.Primary)
+                return Entity{ entity, this };
+        }
+        return {};
+    }
+
+    void Scene::OnPhysics2DStart()
+    {
+        b2WorldDef worldDef = b2DefaultWorldDef();
         worldDef.gravity = { 0.0f, -9.8f };
         m_PhysicsWorld = b2CreateWorld(&worldDef);
 
@@ -181,10 +334,10 @@ namespace Hydra
                 cc2d.RuntimeFixture = new b2ShapeId(shapeId);
 			}
         }
-	}
+    }
 
-	void Scene::OnRuntimeStop()
-	{
+    void Scene::OnPhysics2DStop()
+    {
         auto view = m_Registry.view<Rigidbody2DComponent>();
         for (auto e : view)
         {
@@ -220,110 +373,9 @@ namespace Hydra
 
         b2DestroyWorld(m_PhysicsWorld);
         m_PhysicsWorld = b2_nullWorldId;
-	}
-
-    void Scene::OnUpdateRuntime(Timestep ts)
-    {
-
-        // Update Scripts
-        {
-            m_Registry.view<NativeScriptComponent>().each([=](auto entity, auto& nsc)
-            {
-                // TODO: Move to Scene::OnScenePlay
-                if (!nsc.Instance)
-                {
-                    nsc.Instance = nsc.InstantiateScript();
-                    nsc.Instance->m_Entity = Entity{ entity, this };
-                    nsc.Instance->OnCreate();
-                }
-
-                nsc.Instance->OnUpdate(ts); 
-            });
-        }
-
-        // Physics
-        if (!B2_IS_NULL(m_PhysicsWorld))
-        {
-            const float timeStep = glm::min((float)ts, 1.0f / 30.0f);
-            const int32_t subStepCount = 8;
-            b2World_Step(m_PhysicsWorld, timeStep, subStepCount);
-
-            auto view = m_Registry.view<Rigidbody2DComponent>();
-            for (auto e : view)
-            {
-                Entity entity = { e, this };
-                auto& transform = entity.GetComponent<TransformComponent>();
-                auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
-
-                if (!rb2d.RuntimeBody)
-                    continue;
-
-                b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody;
-
-                if (b2Body_IsValid(bodyId))
-                {
-                    b2Vec2 position = b2Body_GetPosition(bodyId);
-                    float angle = b2Rot_GetAngle(b2Body_GetRotation(bodyId));
-
-                    transform.Translation.x = position.x;
-                    transform.Translation.y = position.y;
-                    transform.Rotation.z = angle;
-                }
-            }
-        }
-
-        // Render 2D
-        Camera* mainCamera = nullptr;
-        glm::mat4 cameraTransform;
-        {
-            auto view = m_Registry.view<TransformComponent, CameraComponent>();
-            for (auto entity : view)
-            {
-                auto [transform, camera] = view.get<TransformComponent, CameraComponent>(entity);
-
-                if (camera.Primary)
-                {
-                    mainCamera = &camera.Camera;
-                    cameraTransform = transform.GetTransform();
-                    break;
-                }
-            }
-        }
-
-        if (mainCamera)
-        {
-            Renderer2D::BeginScene(*mainCamera, cameraTransform);
-
-            // Draw sprites
-            // NOTE: This group owns TransformComponent storage. Do NOT create a second owning
-            // group<TransformComponent> anywhere else in this registry — EnTT will assert at runtime.
-            // Circle rendering intentionally uses a non-owning view for this reason.
-            {
-                auto group = m_Registry.group<TransformComponent>(entt::get<SpriteRendererComponent>);
-                for (auto entity : group)
-                {
-                    auto [transform, sprite] = group.get<TransformComponent, SpriteRendererComponent>(entity);
-
-                    Renderer2D::DrawSprite(transform.GetTransform(), sprite, (int)entity);
-                }
-            }
-
-            // Draw circles
-            {
-                auto view = m_Registry.view<TransformComponent, CircleRendererComponent>();
-                for (auto entity : view)
-                {
-                    auto [transform, circle] = view.get<TransformComponent, CircleRendererComponent>(entity);
-
-                    Renderer2D::DrawCircle(transform.GetTransform(), circle.Color, circle.Thickness, circle.Fade, (int)entity);
-                }
-            }
-
-            Renderer2D::EndScene();
-        }
     }
 
-    void Scene::OnUpdateEditor(Timestep ts, EditorCamera& camera)
+    void Scene::RenderScene(EditorCamera & camera)
     {
         Renderer2D::BeginScene(camera);
 
@@ -350,48 +402,39 @@ namespace Hydra
         }
 
         Renderer2D::EndScene();
-    }   
-
-    void Scene::OnViewportResize(uint32_t width, uint32_t height)
-    {
-        m_ViewportWidth = width;
-        m_ViewportHeight = height;
-
-        // Resize our non-FixedAspectRatio cameras
-        auto view = m_Registry.view<CameraComponent>();
-        for (auto entity : view)
-        {
-            auto& cameraComponent = view.get<CameraComponent>(entity);
-            if (!cameraComponent.FixedAspectRatio)
-                cameraComponent.Camera.SetViewportSize(width, height);
-        }
     }
 
-    void Scene::DuplicateEntity(Entity entity)
+    void Scene::StepPhysics2D(Timestep ts)
     {
-        std::string name = entity.GetName();
-        Entity newEntity = CreateEntity(name);
+        if (B2_IS_NULL(m_PhysicsWorld))
+            return;
 
-        CopyComponentIfExists<TransformComponent>(newEntity, entity);
-        CopyComponentIfExists<SpriteRendererComponent>(newEntity, entity);
-        CopyComponentIfExists<CircleRendererComponent>(newEntity, entity);
-        CopyComponentIfExists<CameraComponent>(newEntity, entity);
-        CopyComponentIfExists<NativeScriptComponent>(newEntity, entity);
-        CopyComponentIfExists<Rigidbody2DComponent>(newEntity, entity);
-        CopyComponentIfExists<BoxCollider2DComponent>(newEntity, entity);
-        CopyComponentIfExists<CircleCollider2DComponent>(newEntity, entity);
-    }
+        const float timeStep = glm::min((float)ts, 1.0f / 30.0f);
+        const int32_t subStepCount = 8;
+        b2World_Step(m_PhysicsWorld, timeStep, subStepCount);
 
-    Entity Scene::GetPrimaryCameraEntity()
-    {
-        auto view = m_Registry.view<CameraComponent>();
-        for (auto entity : view)
+        auto view = m_Registry.view<Rigidbody2DComponent>();
+        for (auto e : view)
         {
-            const auto& cameraComponent = view.get<CameraComponent>(entity);
-            if (cameraComponent.Primary)
-                return Entity{ entity, this };
+            Entity entity = { e, this };
+            auto& transform = entity.GetComponent<TransformComponent>();
+            auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+
+            if (!rb2d.RuntimeBody)
+                continue;
+
+            b2BodyId bodyId = *(b2BodyId*)rb2d.RuntimeBody;
+
+            if (b2Body_IsValid(bodyId))
+            {
+                b2Vec2 position = b2Body_GetPosition(bodyId);
+                float angle = b2Rot_GetAngle(b2Body_GetRotation(bodyId));
+
+                transform.Translation.x = position.x;
+                transform.Translation.y = position.y;
+                transform.Rotation.z = angle;
+            }
         }
-        return {};
     }
 
     template<typename T>
