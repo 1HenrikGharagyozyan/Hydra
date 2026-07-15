@@ -75,6 +75,12 @@ namespace Hydra
 		}(), ...);
 	}
 
+    template<typename... Component>
+    static void CopyComponentIfExists(ComponentGroup<Component...>, Entity dst, Entity src)
+    {
+        CopyComponentIfExists(dst, src);
+    }
+
     Ref<Scene> Scene::Copy(const Ref<Scene>& other)
     {
         Ref<Scene> newScene = CreateRef<Scene>();
