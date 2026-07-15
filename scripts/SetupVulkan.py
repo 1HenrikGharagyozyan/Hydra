@@ -11,7 +11,7 @@ from urllib.request import urlopen
 
 
 class VulkanConfiguration:
-    requiredVulkanVersion = "1.2.170.0"
+    requiredVulkanVersion = "1.3"
     vulkanDirectory = "./Hydra/vendor/VulkanSDK"
 
     @classmethod
@@ -21,7 +21,9 @@ class VulkanConfiguration:
             return
 
         if not cls.CheckVulkanSDKDebugLibs():
-            print("Vulkan SDK debug libs not found.")
+            print("\nNo Vulkan SDK debug libs found. Install Vulkan SDK with debug libs.")
+            print("(see docs.hazelengine.com/GettingStarted for more info).")
+            print("Debug configuration disabled.")
 
     @classmethod
     def CheckVulkanSDK(cls):
@@ -105,23 +107,10 @@ class VulkanConfiguration:
             print(f"Unsupported platform: {system}")
             return False
 
-        VulkanSDKDebugLibsURLlist = [
-            f"https://files.lunar.com/VulkanSDK-{cls.requiredVulkanVersion}-DebugLibs.zip",
-            f"https://sdk.lunarg.com/sdk/download/{cls.requiredVulkanVersion}/windows/VulkanSDK-{cls.requiredVulkanVersion}-DebugLibs.zip",
-            f"https://files.lunarg.com/SDK-{cls.requiredVulkanVersion}/VulkanSDK-{cls.requiredVulkanVersion}-DebugLibs.zip"
-        ]
+        vulkanSDK = os.environ.get("VULKAN_SDK")
+        shadercdLib = Path(f"{vulkanSDK}/Lib/shaderc_sharedd.lib")
 
-        if not shadercdLib.exists():
-            print(f"\nNo Vulkan SDK debug libs found. (Checked {shadercdLib})")
-            vulkanPath = f"{cls.vulkanDirectory}/VulkanSDK-{cls.requiredVulkanVersion}-DebugLibs.zip"
-            Utils.DownloadFile(VulkanSDKDebugLibsURLlist, vulkanPath)
-            print("Extracting", vulkanPath)
-            Utils.UnzipFile(vulkanPath, deleteZipFile=False)
-            print(f"Vulkan SDK debug libs installed at {os.path.abspath(cls.vulkanDirectory)}")
-        else:
-            print(f"\nVulkan SDK debug libs located at {os.path.abspath(cls.vulkanDirectory)}")
-
-        return True
+        return shadercdLib.exists()
 
 
 if __name__ == "__main__":
