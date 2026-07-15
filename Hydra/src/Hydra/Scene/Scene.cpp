@@ -29,13 +29,6 @@ namespace Hydra
         return b2_staticBody;
     }
 
-    template<typename Component>
-    static void CopyComponentIfExists(Entity dst, Entity src)
-    {
-        if (src.HasComponent<Component>())
-            dst.AddOrReplaceComponent<Component>(src.GetComponent<Component>());
-    }
-
     Scene::Scene()
     {
     }
@@ -48,20 +41,39 @@ namespace Hydra
         }
     }
 
-    template<typename Component>
+    template<typename... Component>
     static void CopyComponent(entt::registry& dst, entt::registry& src, const std::unordered_map<UUID, entt::entity>& enttMap)
     {
-        auto view = src.view<Component>();
-        for (auto e : view)
+        ([&]()
         {
-            UUID uuid = src.get<IDComponent>(e).ID;
-            HD_CORE_ASSERT(enttMap.find(uuid) != enttMap.end(), "Entity missing from copy map!");
-            entt::entity dstEnttID = enttMap.at(uuid);
+            auto view = src.view<Component>();
+            for (auto e : view)
+            {
+                UUID uuid = src.get<IDComponent>(e).ID;
+                HD_CORE_ASSERT(enttMap.find(uuid) != enttMap.end(), "Entity missing from copy map!");
+                entt::entity dstEnttID = enttMap.at(uuid);
 
-            auto& component = src.get<Component>(e);
-            dst.emplace_or_replace<Component>(dstEnttID, component);
-        }
+                auto& component = src.get<Component>(e);
+                dst.emplace_or_replace<Component>(dstEnttID, component);
+            }
+        }(), ...);
     }
+
+    template<typename... Component>
+	static void CopyComponent(ComponentGroup<Component...>, entt::registry& dst, entt::registry& src, const std::unordered_map<UUID, entt::entity>& enttMap)
+	{
+		CopyComponent<Component...>(dst, src, enttMap);
+	}
+
+	template<typename... Component>
+	static void CopyComponentIfExists(Entity dst, Entity src)
+	{
+		([&]()
+		{
+			if (src.HasComponent<Component>())
+				dst.AddOrReplaceComponent<Component>(src.GetComponent<Component>());
+		}(), ...);
+	}
 
     Ref<Scene> Scene::Copy(const Ref<Scene>& other)
     {
@@ -83,15 +95,8 @@ namespace Hydra
             enttMap[uuid] = (entt::entity)newEntity;
         }
 
-        // Копируем компоненты напрямую в памяти
-        CopyComponent<TransformComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<SpriteRendererComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<CircleRendererComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<CameraComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<NativeScriptComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<Rigidbody2DComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<BoxCollider2DComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
-        CopyComponent<CircleCollider2DComponent>(dstSceneRegistry, srcSceneRegistry, enttMap);
+        // Copy components (except IDComponent and TagComponent)
+        CopyComponent(AllComponents{}, dstSceneRegistry, srcSceneRegistry, enttMap);
 
         return newScene;
     }
@@ -239,21 +244,6 @@ namespace Hydra
         }
     }
 
-    void Scene::DuplicateEntity(Entity entity)
-    {
-        std::string name = entity.GetName();
-        Entity newEntity = CreateEntity(name);
-
-        CopyComponentIfExists<TransformComponent>(newEntity, entity);
-        CopyComponentIfExists<SpriteRendererComponent>(newEntity, entity);
-        CopyComponentIfExists<CircleRendererComponent>(newEntity, entity);
-        CopyComponentIfExists<CameraComponent>(newEntity, entity);
-        CopyComponentIfExists<NativeScriptComponent>(newEntity, entity);
-        CopyComponentIfExists<Rigidbody2DComponent>(newEntity, entity);
-        CopyComponentIfExists<BoxCollider2DComponent>(newEntity, entity);
-        CopyComponentIfExists<CircleCollider2DComponent>(newEntity, entity);
-    }
-
     Entity Scene::GetPrimaryCameraEntity()
     {
         auto view = m_Registry.view<CameraComponent>();
@@ -265,6 +255,12 @@ namespace Hydra
         }
         return {};
     }
+
+    void Scene::DuplicateEntity(Entity entity)
+	{
+		Entity newEntity = CreateEntity(entity.GetName());
+		CopyComponentIfExists(AllComponents{}, newEntity, entity);
+	}
 
     void Scene::OnPhysics2DStart()
     {
