@@ -25,24 +25,25 @@ namespace Hydra
 	class KeyPressedEvent : public KeyEvent
 	{
 	public:
-		KeyPressedEvent(const KeyCode keycode, const uint16_t repeatCount)
+		KeyPressedEvent(const KeyCode keycode, bool isRepeat)
 			: KeyEvent(keycode)
-			, m_RepeatCount(repeatCount) 
+			, m_IsRepeat(isRepeat)
 		{
 		}
 
-		uint16_t GetRepeatCount() const { return m_RepeatCount; }
+		bool IsRepeat() const { return m_IsRepeat; }
 
 		std::string ToString() const override
 		{
 			std::stringstream ss;
-			ss << "KeyPressedEvent: " << m_KeyCode << " (" << m_RepeatCount << " repeats)";
+			ss << "KeyPressedEvent: " << m_KeyCode << " (repeat = " << m_IsRepeat << ")";
 			return ss.str();
 		}
 
 		EVENT_CLASS_TYPE(KeyPressed)
+	
 	private:
-		uint16_t m_RepeatCount;
+		bool m_IsRepeat;
 	};
 
 
@@ -82,4 +83,5 @@ namespace Hydra
 
 		EVENT_CLASS_TYPE(KeyTyped)
 	};
+
 }
