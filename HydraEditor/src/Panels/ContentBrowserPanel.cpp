@@ -45,8 +45,7 @@ namespace Hydra
 		for (auto& directoryEntry : std::filesystem::directory_iterator(m_CurrentDirectory))
 		{
 			const auto& path = directoryEntry.path();
-			auto relativePath = std::filesystem::relative(path, g_AssetPath);
-			std::string filenameString = relativePath.filename().string();
+			std::string filenameString = path.filename().string();
 
 			ImGui::PushID(filenameString.c_str());
 			Ref<Texture2D> icon = directoryEntry.is_directory() ? m_DirectoryIcon : m_FileIcon;
@@ -61,6 +60,7 @@ namespace Hydra
 
 			if (ImGui::BeginDragDropSource())
 			{
+				auto relativePath = std::filesystem::relative(path, g_AssetPath);
 				const char* itemPath = relativePath.c_str();
 				ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", itemPath, (strlen(itemPath) + 1) * sizeof(char));
 				ImGui::Text(filenameString.c_str());
