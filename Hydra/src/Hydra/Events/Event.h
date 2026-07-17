@@ -1,9 +1,10 @@
 #pragma once
 
-#include <functional>
-
 #include "Hydra/Debug/Instrumentor.h"
 #include "Hydra/Core/Base.h"
+
+#include <functional>
+
 
 namespace Hydra
 {

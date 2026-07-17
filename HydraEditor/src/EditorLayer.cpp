@@ -1,19 +1,16 @@
 #include "EditorLayer.h"
-
 #include "Hydra/Core/Input.h"
+#include "Hydra/Scene/SceneSerializer.h"
+#include "Hydra/Utils/PlatformUtils.h"
+#include "Hydra/Math/Math.h"
+
 #include <imgui/imgui.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
-#include "Hydra/Scene/SceneSerializer.h"
-
-#include "Hydra/Utils/PlatformUtils.h"
-
 #include <ImGuizmo/src/ImGuizmo.h>
-
-#include "Hydra/Math/Math.h"
 
 
 namespace Hydra

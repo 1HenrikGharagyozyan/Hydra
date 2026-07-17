@@ -1,7 +1,8 @@
 #pragma once
 
-#include <memory>
 #include "Hydra/Core/PlatformDetection.h" 
+
+#include <memory>
 
 // ================= DLL EXPORT / IMPORT =================
 #ifdef HD_DYNAMIC_LINK

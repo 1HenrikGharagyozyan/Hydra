@@ -1,8 +1,7 @@
 #include "hdpch.h"
 #include "OpenGLShader.h"
-
-#include "Hydra/Core/Log.h"
 #include "Hydra/Core/Timer.h"
+#include "Hydra/Core/Log.h"
 
 #include <fstream>
 #include <sstream>
@@ -13,7 +12,6 @@
 #include <shaderc/shaderc.hpp>
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
-
 
 
 namespace Hydra

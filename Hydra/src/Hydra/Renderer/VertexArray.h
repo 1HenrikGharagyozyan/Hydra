@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Hydra/Renderer/Buffer.h"
+
 #include <memory>
-#include "Buffer.h"
+
 
 namespace Hydra
 {

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <sstream>
-
 #include "Hydra/Core/Base.h"
 #include "Hydra/Events/Event.h"
+
+#include <sstream>
+
 
 namespace Hydra
 {

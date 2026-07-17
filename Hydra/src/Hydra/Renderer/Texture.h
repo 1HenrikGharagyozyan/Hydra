@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Hydra/Core/Base.h"
+
 #include <string>
 
-#include "Hydra/Core/Base.h"
 
 namespace Hydra 
 {

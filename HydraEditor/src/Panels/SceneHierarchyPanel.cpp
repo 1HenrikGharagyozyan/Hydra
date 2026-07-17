@@ -1,11 +1,10 @@
 #include "SceneHierarchyPanel.h"
+#include "Hydra/Scene/Components.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 
 #include <glm/gtc/type_ptr.hpp>
-
-#include "Hydra/Scene/Components.h"
 
 #include <cstring>
 

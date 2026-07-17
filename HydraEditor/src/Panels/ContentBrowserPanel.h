@@ -1,8 +1,8 @@
 #pragma once
 
-#include <filesystem>
-
 #include "Hydra/Renderer/Texture.h"
+
+#include <filesystem>
 
 
 namespace Hydra

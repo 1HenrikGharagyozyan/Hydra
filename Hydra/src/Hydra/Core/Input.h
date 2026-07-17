@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include "Hydra/Core/KeyCodes.h"
 #include "Hydra/Core/MouseCodes.h"
+
+#include <glm/glm.hpp>
 
 
 namespace Hydra

@@ -1,5 +1,6 @@
 #include "hdpch.h"
 #include "Scene.h"
+#include "Entity.h"
 
 #include "Hydra/Scene/Components.h"
 #include "Hydra/Scene/ScriptableEntity.h"
@@ -9,8 +10,6 @@
 #include <glm/glm.hpp>
 
 #include <box2d/box2d.h>
-
-#include "Entity.h"
 
 
 namespace Hydra
