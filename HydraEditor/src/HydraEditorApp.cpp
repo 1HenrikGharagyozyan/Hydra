@@ -9,8 +9,8 @@ namespace Hydra
 	class HydraEditor : public Application
 	{
 	public:
-		HydraEditor(ApplicationCommandLineArgs args)
-			: Application("Hydra Editor", args)
+		HydraEditor(const ApplicationSpecification& spec)
+			: Application(spec)
 		{
 			PushLayer(new EditorLayer());
 		}
@@ -22,7 +22,11 @@ namespace Hydra
 
 	Application* CreateApplication(ApplicationCommandLineArgs args)
 	{
-		return new HydraEditor(args);
+		ApplicationSpecification spec;
+		spec.Name = "HydraEditor";
+		spec.CommandLineArgs = args;
+
+		return new HydraEditor(spec);
 	}
 
 }
