@@ -12,17 +12,21 @@
 namespace Hydra
 {
 	
-	Application *Application::s_Instance = nullptr;
+	Application* Application::s_Instance = nullptr;
 
-	Application::Application(const std::string& name, ApplicationCommandLineArgs args)
-			: m_CommandLineArgs(args)
+	Application::Application(const ApplicationSpecification& specification)
+		: m_Specification(specification)
 	{
 		HD_PROFILE_FUNCTION();
 
 		HD_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		m_Window = Window::Create(WindowProps(name));
+		// Set working directory here
+		if (!m_Specification.WorkingDirectory.empty())
+			std::filesystem::current_path(m_Specification.WorkingDirectory);
+
+		m_Window = Window::Create(WindowProps(m_Specification.Name));
 		m_Window->SetEventCallback(HD_BIND_EVENT_FN(Application::OnEvent));
 
 		Renderer::Init();
@@ -38,7 +42,7 @@ namespace Hydra
 		Renderer::Shutdown();
 	}
 
-	void Application::PushLayer(Layer *layer)
+	void Application::PushLayer(Layer* layer)
 	{
 		HD_PROFILE_FUNCTION();
 
@@ -46,7 +50,7 @@ namespace Hydra
 		layer->OnAttach();
 	}
 
-	void Application::PushOverlay(Layer *layer)
+	void Application::PushOverlay(Layer* layer)
 	{
 		HD_PROFILE_FUNCTION();
 
@@ -59,7 +63,7 @@ namespace Hydra
 		m_Running = false;
 	}
 
-	void Application::OnEvent(Event &e)
+	void Application::OnEvent(Event& e)
 	{
 		HD_PROFILE_FUNCTION();
 
@@ -110,14 +114,14 @@ namespace Hydra
 		}
 	}
 
-	bool Application::OnWindowClose(WindowCloseEvent &e)
+	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
 
 		m_Running = false;
 		return true;
 	}
 
-	bool Application::OnWindowResize(WindowResizeEvent &e)
+	bool Application::OnWindowResize(WindowResizeEvent& e)
 	{
 		HD_PROFILE_FUNCTION();
 

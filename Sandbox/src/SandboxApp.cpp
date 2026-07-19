@@ -7,8 +7,8 @@
 class Sandbox : public Hydra::Application
 {
 public:
-	Sandbox(Hydra::ApplicationCommandLineArgs args)
-		: Application("Sandbox", args)
+	Sandbox(const Hydra::ApplicationSpecification& specification)
+		: Hydra::Application(specification)
 	{
 		// PushLayer(new ExampleLayer());
 		PushLayer(new Sandbox2D());
@@ -21,5 +21,10 @@ public:
 
 Hydra::Application* Hydra::CreateApplication(ApplicationCommandLineArgs args)
 {
-	return new Sandbox(args);
+	ApplicationSpecification spec;
+	spec.Name = "Sandbox";
+	spec.WorkingDirectory = "../HydraEditor";
+	spec.CommandLineArgs = args;
+
+	return new Sandbox(spec);
 }
