@@ -12,6 +12,7 @@ from urllib.request import urlopen
 
 class VulkanConfiguration:
     requiredVulkanVersion = "1.3"
+    installVulkanVersion = "1.3.216.0"
     vulkanDirectory = "./Hydra/vendor/VulkanSDK"
 
     @classmethod
@@ -49,7 +50,7 @@ class VulkanConfiguration:
         permissionGranted = False
         while not permissionGranted:
             reply = str(input(
-                "Would you like to install VulkanSDK {0:s}? [Y/N]: ".format(cls.requiredVulkanVersion)
+                "Would you like to install VulkanSDK {0:s}? [Y/N]: ".format(cls.installVulkanVersion)
             )).lower().strip()[:1]
             if reply == 'n':
                 return
@@ -76,10 +77,10 @@ class VulkanConfiguration:
 
         elif system == "Darwin":
             vulkanInstallURL = (
-                f"https://sdk.lunarg.com/sdk/download/{cls.requiredVulkanVersion}"
-                f"/mac/vulkansdk-macos-{cls.requiredVulkanVersion}.dmg"
+                f"https://sdk.lunarg.com/sdk/download/{cls.installVulkanVersion}"
+                f"/mac/vulkansdk-macos-{cls.installVulkanVersion}.dmg"
             )
-            vulkanPath = f"{cls.vulkanDirectory}/vulkansdk-macos-{cls.requiredVulkanVersion}.dmg"
+            vulkanPath = f"{cls.vulkanDirectory}/vulkansdk-macos-{cls.installVulkanVersion}.dmg"
             print(f"Downloading {vulkanInstallURL} to {vulkanPath}")
             Utils.DownloadFile(vulkanInstallURL, vulkanPath)
             print("Mounting DMG installer...")
