@@ -2,6 +2,8 @@
 #include "Hydra/Utils/PlatformUtils.h"
 #include "Hydra/Core/Application.h"
 
+#include <GLFW/glfw3.h>
+
 #include <cstdio>
 #include <memory>
 #include <array>
@@ -11,6 +13,11 @@
 
 namespace Hydra 
 {
+
+    float Time::GetTime()
+    {
+        return glfwGetTime(); // TODO: Maybe Vulkan 
+    }
 
     std::string FileDialogs::OpenFile(const char* filter)
     {
