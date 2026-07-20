@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <functional>
 
 namespace Hydra 
 {
@@ -23,12 +21,14 @@ namespace Hydra
 namespace std 
 {
 
+	template<typename T> struct hash;
+
 	template<>
 	struct hash<Hydra::UUID>
 	{
 		std::size_t operator()(const Hydra::UUID& uuid) const
 		{
-			return hash<uint64_t>()((uint64_t)uuid);
+			return (uint64_t)uuid;
 		}
 	};
 
