@@ -14,10 +14,6 @@ namespace Hydra
 		{
 			PushLayer(new EditorLayer());
 		}
-
-		~HydraEditor()
-		{
-		}
 	};
 
 	Application* CreateApplication(ApplicationCommandLineArgs args)
