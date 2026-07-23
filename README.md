@@ -48,24 +48,29 @@ sudo apt install build-essential python3 vulkan-sdk
 
 ### Build Steps
 
-**1.** Check environment and retrieve any necessary dependencies:
+Run the setup script from the repo root. It checks/installs Premake, the
+Vulkan SDK and Mono, pulls submodules, generates Makefiles via Premake, and
+then builds and launches HydraEditor automatically — no further steps
+needed:
+
 ```bash
-python3 scripts/Setup.py
+python3 Setup.py
 ```
 
-**2.** Generate Makefiles using Premake:
+If you only want to (re)generate and build without launching the editor,
+you can run the underlying pieces yourself instead:
+
 ```bash
-./scripts/Linux-GenProjects.sh
+python3 scripts/Setup.py          # dependency checks + submodules only
+./scripts/Launch/Linux-GenProject.sh   # generate, build, and launch
 ```
 
-**3.** Build the engine and applications:
-```bash
-make -j$(nproc)
-```
+or, for finer-grained control:
 
-**4.** Launch the editor:
 ```bash
-./scripts/LaunchEditor.sh
+./vendor/premake/bin/premake5 gmake2   # generate Makefiles
+make -j$(nproc)                        # build the engine and applications
+./bin/Debug-linux-x86_64/HydraEditor/HydraEditor   # launch the editor
 ```
 
 ---
