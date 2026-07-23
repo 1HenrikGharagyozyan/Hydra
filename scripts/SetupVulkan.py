@@ -97,19 +97,19 @@ class VulkanConfiguration:
     @classmethod
     def CheckVulkanSDKDebugLibs(cls):
         system = platform.system()
+        vulkanSDK = os.environ.get("VULKAN_SDK")
 
-        if system == "Windows":
-            shadercdLib = Path(f"{cls.vulkanDirectory}/Lib/shaderc_sharedd.lib")
-        elif system == "Linux":
-            shadercdLib = Path(f"{cls.vulkanDirectory}/lib/libshaderc_sharedd.so")
-        elif system == "Darwin":
-            shadercdLib = Path(f"{cls.vulkanDirectory}/lib/libshaderc_sharedd.dylib")
-        else:
-            print(f"Unsupported platform: {system}")
+        if not vulkanSDK:
             return False
 
-        vulkanSDK = os.environ.get("VULKAN_SDK")
-        shadercdLib = Path(f"{vulkanSDK}/Lib/shaderc_sharedd.lib")
+        if system == "Windows":
+            shadercdLib = Path(f"{vulkanSDK}/Lib/shaderc_sharedd.lib")
+        elif system == "Linux":
+            shadercdLib = Path(f"{vulkanSDK}/lib/libshaderc_sharedd.so")
+        elif system == "Darwin":
+            shadercdLib = Path(f"{vulkanSDK}/lib/libshaderc_sharedd.dylib")
+        else:
+            return False
 
         return shadercdLib.exists()
 

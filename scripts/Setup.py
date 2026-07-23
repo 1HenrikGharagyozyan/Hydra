@@ -9,11 +9,13 @@ PythonRequirements.Validate()
 
 from SetupPremake import PremakeConfiguration as PremakeRequirements
 from SetupVulkan import VulkanConfiguration as VulkanRequirements
+from SetupMono import MonoConfiguration as MonoRequirements
 
 os.chdir('./../')  # Change from scripts directory to root
 
 premakeInstalled = PremakeRequirements.Validate()
 VulkanRequirements.Validate()
+MonoRequirements.Validate()  # <- Добавлен пропущенный вызов проверки Mono
 
 print("\nUpdating submodules...")
 subprocess.call(["git", "submodule", "update", "--init", "--recursive"])
