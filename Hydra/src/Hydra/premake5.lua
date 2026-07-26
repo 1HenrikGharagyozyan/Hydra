@@ -48,7 +48,8 @@ project "Hydra"
 		"%{IncludeDir.stb_image}",
 		"%{IncludeDir.entt}",
 		"%{IncludeDir.yaml_cpp}",
-		"%{IncludeDir.ImGuizmo}/src"
+		"%{IncludeDir.ImGuizmo}/src",
+		"%{IncludeDir.Mono}"
 	}
 
 	links
@@ -78,7 +79,8 @@ project "Hydra"
 		}
 		links
 		{
-			"opengl32.lib"
+			"opengl32.lib",
+			"%{Library.Mono}"
 		}
 
 	filter "system:linux"
@@ -90,6 +92,11 @@ project "Hydra"
 			"../Platform/Linux/**.h",
 			"../Platform/Linux/**.cpp"
 		}
+		libdirs
+		{
+			"%{LibraryDir.Mono}"
+		}
+
 		links
 		{
 			"GL",
@@ -98,7 +105,8 @@ project "Hydra"
 			"X11",
 			"shaderc_shared",
 			"spirv-cross-glsl",
-			"spirv-cross-core"
+			"spirv-cross-core",
+			"mono-2.0"
 		}
 
 	filter "configurations:Debug"

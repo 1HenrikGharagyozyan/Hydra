@@ -8,6 +8,11 @@
 #include "Input.h"
 #include "Hydra/Utils/PlatformUtils.h"
 
+#include "mono/jit/jit.h"
+#include "mono/metadata/assembly.h"
+#include "mono/metadata/object.h"
+
+
 
 namespace Hydra
 {
