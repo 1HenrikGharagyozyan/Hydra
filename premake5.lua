@@ -34,6 +34,15 @@ group "Dependencies"
     include "Hydra/vendor/yaml-cpp"
 group ""
 
-include "Hydra/src/Hydra"
-include "Sandbox"
-include "HydraEditor"
+group "Core"
+    include "Hydra/src/Hydra"
+    include "Hydra-ScriptCore"
+group ""
+
+group "Tools"
+    include "HydraEditor"
+group ""
+
+group "Misc"
+    include "Sandbox"
+group ""

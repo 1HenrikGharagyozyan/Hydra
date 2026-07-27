@@ -195,6 +195,28 @@ namespace Hydra
         delete[] s_Data.QuadVertexBufferBase;
         delete[] s_Data.CircleVertexBufferBase;
         delete[] s_Data.LineVertexBufferBase;
+
+        // s_Data is a static, so without releasing its Ref<...> GPU resources
+        // here, they'd only be destroyed at process exit - after the window/GL
+        // context is already gone - and crash trying to call GL cleanup
+        // functions with no context current.
+        s_Data.QuadVertexArray = nullptr;
+        s_Data.QuadVertexBuffer = nullptr;
+        s_Data.QuadShader = nullptr;
+        s_Data.WhiteTexture = nullptr;
+
+        s_Data.CircleVertexArray = nullptr;
+        s_Data.CircleVertexBuffer = nullptr;
+        s_Data.CircleShader = nullptr;
+
+        s_Data.LineVertexArray = nullptr;
+        s_Data.LineVertexBuffer = nullptr;
+        s_Data.LineShader = nullptr;
+
+        s_Data.CameraUniformBuffer = nullptr;
+
+        for (auto& texture : s_Data.TextureSlots)
+            texture = nullptr;
     }
 
     void Renderer2D::BeginScene(const OrthographicCamera& camera)

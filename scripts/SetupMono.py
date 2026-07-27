@@ -1,5 +1,6 @@
 import os
 import platform
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -7,7 +8,7 @@ import Utils
 
 class MonoConfiguration:
     # Версия для скачивания на Windows
-    monoVersion = "6.12.0.199" 
+    monoVersion = "6.12.0.199"
     monoInstallUrl = f"https://download.mono-project.com/archive/{monoVersion}/windows-installer/mono-{monoVersion}-x64-0.msi"
     monoInstallerPath = "./vendor/MonoInstaller.msi"
 
@@ -16,6 +17,11 @@ class MonoConfiguration:
         if not cls.CheckMono():
             print("Mono is not installed or configured correctly.")
             return False
+
+        if not cls.CheckMonoCompiler():
+            print("Mono C# compiler is not installed or configured correctly.")
+            return False
+
         return True
 
     @classmethod
@@ -47,6 +53,43 @@ class MonoConfiguration:
                 return cls.__InstallMono(system)
 
         return False
+
+    @classmethod
+    def CheckMonoCompiler(cls):
+        # libmono-2.0-dev / the Windows Mono installer only cover the embeddable
+        # runtime used by ScriptEngine.cpp. Building Hydra-ScriptCore.dll also
+        # needs an actual C# compiler (csc/mcs), which is a separate package on Linux.
+        system = platform.system()
+
+        if system == "Windows":
+            # The official Windows Mono installer already bundles the C# compiler.
+            return True
+
+        elif system == "Linux":
+            if shutil.which("csc") or shutil.which("mcs"):
+                print("Correct Mono C# compiler (csc/mcs) located.")
+                return True
+
+            print("\nNo Mono C# compiler (csc/mcs) found!")
+            print("Hydra-ScriptCore.dll cannot be built without it.")
+            return cls.__InstallMonoCompiler()
+
+        return True
+
+    @classmethod
+    def __InstallMonoCompiler(cls):
+        permissionGranted = False
+        while not permissionGranted:
+            reply = str(input("Would you like instructions to install it? [Y/N]: ")).lower().strip()[:1]
+            if reply == 'n':
+                return False
+            permissionGranted = (reply == 'y')
+
+        print("\nOn Linux, please install the Mono C# compiler manually via your package manager:")
+        print("  Ubuntu/Debian: sudo apt update && sudo apt install mono-complete")
+        print("  Arch Linux:    sudo pacman -S mono")
+        print("\nRe-run this script after installation!")
+        quit()
 
     @classmethod
     def __InstallMono(cls, system):

@@ -5,14 +5,22 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Navigate to the root of the Hydra project
 cd "$SCRIPT_DIR/../.."
 
-echo "=== Generating project files ==="
-if ! premake5 gmake2; then
-    echo "Project generation failed! Exiting..."
+# Hydra-ScriptCore is a Premake/Mono project (built via the generated Makefile
+# below), not an SDK-style project - there is no .csproj, so msbuild/dotnet
+# build cannot target it. Pick whichever Mono C# compiler is actually
+# installed; Ubuntu's mono packages only ship `mcs`, not `csc`.
+if command -v csc &> /dev/null; then
+    CSHARP_COMPILER=csc
+elif command -v mcs &> /dev/null; then
+    CSHARP_COMPILER=mcs
+else
+    echo "No C# compiler (csc/mcs) found. Install it with: sudo apt install mono-complete"
     exit 1
 fi
 
+# Инкрементальная сборка C++ и C# (пересобирает ТОЛЬКО измененные файлы)
 echo "=== Building Hydra Engine (Debug) ==="
-if ! make config=debug -j"$(nproc)"; then
+if ! make config=debug CSC="$CSHARP_COMPILER" -j"$(nproc)"; then
     echo "Build failed! Exiting..."
     exit 1
 fi
