@@ -2,6 +2,7 @@
 
 VULKAN_SDK = os.getenv("VULKAN_SDK")
 
+
 -- Include directories relative to root folder (solution directory)
 IncludeDir = {}
 IncludeDir["GLFW"]      = "%{wks.location}/Hydra/vendor/GLFW/include"
@@ -33,3 +34,17 @@ Library["SPIRV_Tools_Debug"] = "%{LibraryDir.VulkanSDK}/SPIRV-Toolsd.lib"
 Library["ShaderC_Release"] = "%{LibraryDir.VulkanSDK}/shaderc_shared.lib"
 Library["SPIRV_Cross_Release"] = "%{LibraryDir.VulkanSDK}/spirv-cross-core.lib"
 Library["SPIRV_Cross_GLSL_Release"] = "%{LibraryDir.VulkanSDK}/spirv-cross-glsl.lib"
+
+-- Mono
+if os.host() == "windows" then
+    MONO_SDK = os.getenv("MONO_SDK") or "C:/Program Files/Mono"
+
+    IncludeDir["Mono"] = "%{MONO_SDK}/include/mono-2.0"
+    LibraryDir["Mono"] = "%{MONO_SDK}/lib"
+    Library["Mono"]    = "%{LibraryDir.Mono}/mono-2.0-sgen.lib"
+elseif os.host() == "linux" then
+    -- Mono ships as a system dev package on Linux (libmono-2.0-dev), so its
+    -- paths are discovered via pkg-config instead of a fixed SDK directory.
+    IncludeDir["Mono"] = os.outputof("pkg-config --variable=includedir mono-2")
+    LibraryDir["Mono"] = os.outputof("pkg-config --variable=libdir mono-2")
+end

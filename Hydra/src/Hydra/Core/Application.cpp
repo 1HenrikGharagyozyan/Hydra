@@ -4,9 +4,15 @@
 #include "Hydra/Core/Log.h"
 
 #include "Hydra/Renderer/Renderer.h"
+#include "Hydra/Scripting/ScriptEngine.h"
 
 #include "Input.h"
 #include "Hydra/Utils/PlatformUtils.h"
+
+#include "mono/jit/jit.h"
+#include "mono/metadata/assembly.h"
+#include "mono/metadata/object.h"
+
 
 
 namespace Hydra
@@ -30,6 +36,7 @@ namespace Hydra
 		m_Window->SetEventCallback(HD_BIND_EVENT_FN(Application::OnEvent));
 
 		Renderer::Init();
+		ScriptEngine::Init();
 
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
@@ -40,6 +47,7 @@ namespace Hydra
 		HD_PROFILE_FUNCTION();
 
 		Renderer::Shutdown();
+		ScriptEngine::Shutdown();
 	}
 
 	void Application::PushLayer(Layer* layer)
