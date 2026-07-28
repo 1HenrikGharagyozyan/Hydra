@@ -1,56 +1,39 @@
 #include "hdpch.h"
 #include "ScriptGlue.h"
 
-#include "Hydra/Core/Log.h"
+#include "mono/metadata/object.h"
 
-#include <mono/jit/jit.h>
-#include <mono/metadata/object.h>
-#include <mono/utils/mono-publib.h>
 
-namespace Hydra
+namespace Hydra 
 {
 
-	static std::string MonoStringToUTF8(MonoString* monoString)
-	{
-		if (monoString == nullptr)
-			return std::string();
+#define HD_ADD_INTERNAL_CALL(Name) mono_add_internal_call("Hydra.InternalCalls::" #Name, (const void*)(Name))
 
-		char* utf8 = mono_string_to_utf8(monoString);
-		std::string result(utf8);
-		mono_free(utf8);
-		return result;
+	static void NativeLog(MonoString* string, int parameter)
+	{
+		char* cStr = mono_string_to_utf8(string);
+		std::string str(cStr);
+		mono_free(cStr);
+		std::cout << str << ", " << parameter << std::endl;
 	}
 
-	// Mirrors Hydra.LogLevel in Hydra-ScriptCore/Source/Log.cs
-	enum class ScriptLogLevel : int32_t
+	static void NativeLog_Vector(glm::vec3* parameter, glm::vec3* outResult)
 	{
-		Trace = 0,
-		Info = 1,
-		Warn = 2,
-		Error = 3
-	};
-
-	static void Log_LogMessage(MonoString* message, int32_t level)
-	{
-		std::string msg = MonoStringToUTF8(message);
-
-		switch ((ScriptLogLevel)level)
-		{
-			case ScriptLogLevel::Trace: HD_TRACE(msg); break;
-			case ScriptLogLevel::Info:  HD_INFO(msg);  break;
-			case ScriptLogLevel::Warn:  HD_WARN(msg);  break;
-			case ScriptLogLevel::Error: HD_ERROR(msg); break;
-			default:
-				HD_CORE_WARN("Log_LogMessage: unknown log level {} for message '{}'", level, msg);
-				break;
-		}
+		HD_CORE_WARN("Value: {0}", glm::to_string(*parameter));
+		*outResult = glm::normalize(*parameter);
 	}
 
-#define HD_ADD_INTERNAL_CALL(name) mono_add_internal_call("Hydra.InternalCalls::" #name, (void*)name)
+	static float NativeLog_VectorDot(glm::vec3* parameter)
+	{
+		HD_CORE_WARN("Value: {0}", glm::to_string(*parameter));
+		return glm::dot(*parameter, *parameter);
+	}
 
 	void ScriptGlue::RegisterFunctions()
 	{
-		HD_ADD_INTERNAL_CALL(Log_LogMessage);
+		HD_ADD_INTERNAL_CALL(NativeLog);
+		HD_ADD_INTERNAL_CALL(NativeLog_Vector);
+		HD_ADD_INTERNAL_CALL(NativeLog_VectorDot);
 	}
 
 }
