@@ -8,6 +8,10 @@
 #include "mono/metadata/object.h"
 #include "mono/utils/mono-publib.h"
 
+#ifdef __linux__
+	#include <dlfcn.h>
+#endif
+
 
 namespace Hydra 
 {
@@ -144,6 +148,70 @@ namespace Hydra
 			return true;
 		}
 
+#ifdef __linux__
+		// Some Mono builds (confirmed on Ubuntu 24.04's packaged mono-complete
+		// 6.8.0.105) route culture-aware number formatting - e.g. float.ToString(),
+		// hit by any string interpolation over a float - through
+		// DllImport("System.Native"). Classic Mono never ships that native
+		// library; only .NET (Core/5+) does, as libSystem.Native.so. Without it,
+		// the very first such call throws a DllNotFoundException wrapped in a
+		// TypeInitializationException for 'Sys'.
+		//
+		// If a .NET runtime happens to be installed, dlopen() its copy of the
+		// library directly by full path before mono_jit_init(). Once a library
+		// is resident in the process, a later dlopen() by bare soname (which is
+		// how Mono's own DllImport resolution works) finds the already-loaded
+		// copy directly - unlike LD_LIBRARY_PATH, which glibc only parses once
+		// at process startup, so setting it this late has no effect on
+		// subsequent lookups. No-op (and Mono just throws as before) if nothing
+		// is found.
+		static void PreloadDotNetNativeLibrary()
+		{
+			static const char* searchRoots[] = {
+				"/usr/lib/dotnet/shared/Microsoft.NETCore.App",
+				"/usr/share/dotnet/shared/Microsoft.NETCore.App",
+			};
+
+			std::filesystem::path bestPath;
+			std::string bestVersion;
+
+			for (const char* root : searchRoots)
+			{
+				std::error_code ec;
+				if (!std::filesystem::exists(root, ec))
+					continue;
+
+				for (const auto& entry : std::filesystem::directory_iterator(root, ec))
+				{
+					if (!entry.is_directory())
+						continue;
+
+					std::filesystem::path candidate = entry.path() / "libSystem.Native.so";
+					if (!std::filesystem::exists(candidate, ec))
+						continue;
+
+					std::string version = entry.path().filename().string();
+					if (bestVersion.empty() || version > bestVersion)
+					{
+						bestVersion = version;
+						bestPath = candidate;
+					}
+				}
+			}
+
+			if (bestPath.empty())
+				return;
+
+			if (dlopen(bestPath.c_str(), RTLD_NOW | RTLD_GLOBAL) == nullptr)
+			{
+				HD_CORE_WARN("ScriptEngine: found but failed to preload '{}': {}", bestPath.string(), dlerror());
+				return;
+			}
+
+			HD_CORE_TRACE("ScriptEngine: preloaded .NET runtime native library '{}'", bestPath.string());
+		}
+#endif
+
 	}
 
 	struct ScriptEngineData
@@ -232,6 +300,10 @@ namespace Hydra
 		mono_set_assemblies_path("/usr/lib");
 #elif defined(__APPLE__)
 		mono_set_assemblies_path("/Library/Frameworks/Mono.framework/Versions/Current/lib");
+#endif
+
+#ifdef __linux__
+		Utils::PreloadDotNetNativeLibrary();
 #endif
 
 		MonoDomain* rootDomain = mono_jit_init("HydraJITRuntime");
