@@ -99,6 +99,15 @@ namespace Hydra
     };
 
 
+    struct ScriptComponent
+	{
+		std::string ClassName;
+
+		ScriptComponent() = default;
+		ScriptComponent(const ScriptComponent&) = default;
+	};
+
+
     struct NativeScriptComponent
     {
         ScriptableEntity* Instance = nullptr;
@@ -180,11 +189,27 @@ namespace Hydra
     };
 
     using AllComponents = ComponentGroup<
-        TransformComponent, 
-        SpriteRendererComponent, 
-        CircleRendererComponent, 
-        CameraComponent, 
+        TransformComponent,
+        SpriteRendererComponent,
+        CircleRendererComponent,
+        CameraComponent,
+        ScriptComponent,
         NativeScriptComponent,
+        Rigidbody2DComponent,
+        BoxCollider2DComponent,
+        CircleCollider2DComponent
+    >;
+
+    // Components that have (or are expected to have) a matching Hydra.<Name>
+    // class in Hydra-ScriptCore, used to build the Entity.HasComponent<T>()/
+    // GetComponent<T>() lookup table. ScriptComponent and NativeScriptComponent
+    // are deliberately excluded - they're C++-only bookkeeping, not something
+    // a script would ever query on itself.
+    using ScriptableComponents = ComponentGroup<
+        TransformComponent,
+        SpriteRendererComponent,
+        CircleRendererComponent,
+        CameraComponent,
         Rigidbody2DComponent,
         BoxCollider2DComponent,
         CircleCollider2DComponent
