@@ -6,6 +6,7 @@
 #include "Hydra/Scene/ScriptableEntity.h"
 #include "Hydra/Scene/SceneSerializer.h"
 #include "Hydra/Renderer/Renderer2D.h"
+#include "Hydra/Scripting/ScriptEngine.h"
 
 #include <glm/glm.hpp>
 
@@ -118,22 +119,41 @@ namespace Hydra
         entity.AddComponent<TransformComponent>();
         auto& tag = entity.AddComponent<TagComponent>();
         tag.Tag = name.empty() ? "Entity" : name;
+
+        m_EntityMap[uuid] = entity;
+
         return entity;
     }
 
     void Scene::DestroyEntity(Entity entity)
     {
         m_Registry.destroy(entity);
+        m_EntityMap.erase(entity.GetUUID());
     }
 
     void Scene::OnRuntimeStart()
 	{
         OnPhysics2DStart();
+
+        // Scripting
+		{
+			ScriptEngine::OnRuntimeStart(this);
+			// Instantiate all script entities
+
+			auto view = m_Registry.view<ScriptComponent>();
+			for (auto e : view)
+			{
+				Entity entity = { e, this };
+				ScriptEngine::OnCreateEntity(entity);
+			}
+		}
 	}
 
 	void Scene::OnRuntimeStop()
 	{
         OnPhysics2DStop();
+
+        ScriptEngine::OnRuntimeStop();
 	}
 
     void Scene::OnSimulationStart()
@@ -151,6 +171,15 @@ namespace Hydra
 
         // Update Scripts
         {
+            // C# Entity OnUpdate
+			auto view = m_Registry.view<ScriptComponent>();
+			for (auto e : view)
+			{
+				Entity entity = { e, this };
+				ScriptEngine::OnUpdateEntity(entity, ts);
+			}
+
+
             m_Registry.view<NativeScriptComponent>().each([=](auto entity, auto& nsc)
             {
                 // TODO: Move to Scene::OnScenePlay
@@ -266,6 +295,15 @@ namespace Hydra
 		Entity newEntity = CreateEntity(entity.GetName());
 		CopyComponentIfExists(AllComponents{}, newEntity, entity);
 	}
+
+    Entity Scene::GetEntityByUUID(UUID uuid)
+    {
+        // TODO: Maybe should be assert
+		if (m_EntityMap.find(uuid) != m_EntityMap.end())
+			return { m_EntityMap.at(uuid), this };
+
+		return {};
+    }
 
     void Scene::OnPhysics2DStart()
     {
@@ -459,6 +497,11 @@ namespace Hydra
 	{
         if (m_ViewportWidth > 0 && m_ViewportHeight > 0)
             component.Camera.SetViewportSize(m_ViewportWidth, m_ViewportHeight);
+	}
+
+    template<>
+	void Scene::OnComponentAdded<ScriptComponent>(Entity entity, ScriptComponent& component)
+	{
 	}
 
 	template<>
