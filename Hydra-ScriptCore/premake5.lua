@@ -4,10 +4,9 @@ project "Hydra-ScriptCore"
 	dotnetframework "4.7.2"
 	targetdir ("%{wks.location}/Hydra/Resources/Scripts")
 	objdir ("%{wks.location}/Hydra/Resources/Scripts/Intermediates")
-	files 
+	files
 	{
-		"Source/**.cs",
-		"Properties/**.cs"
+		"**.cs"
 	}
 	
 	filter "configurations:Debug"
