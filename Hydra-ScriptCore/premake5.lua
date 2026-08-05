@@ -2,8 +2,8 @@ project "Hydra-ScriptCore"
 	kind "SharedLib"
 	language "C#"
 	dotnetframework "4.7.2"
-	targetdir ("%{wks.location}/Hydra/Resources/Scripts")
-	objdir ("%{wks.location}/Hydra/Resources/Scripts/Intermediates")
+	targetdir ("../HydraEditor/Resources/Scripts")
+	objdir ("../HydraEditor/Resources/Scripts/Intermediates")
 	files
 	{
 		"**.cs"
