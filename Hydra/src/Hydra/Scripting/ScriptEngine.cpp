@@ -222,6 +222,9 @@ namespace Hydra
 		MonoAssembly* CoreAssembly = nullptr;
 		MonoImage* CoreAssemblyImage = nullptr;
 
+		MonoAssembly* AppAssembly = nullptr;
+		MonoImage* AppAssemblyImage = nullptr;
+
 		ScriptClass EntityClass;
 
 		std::unordered_map<std::string, Ref<ScriptClass>> EntityClasses;
@@ -240,8 +243,7 @@ namespace Hydra
 		InitMono();
 		// Relative to the running app's working directory (e.g. HydraEditor/),
 		// not the repo root - the assembly is built to <repo>/Hydra/Resources/Scripts.
-		LoadAssembly("../Hydra/Resources/Scripts/Hydra-ScriptCore.dll");
-		LoadAssemblyClasses(s_Data->CoreAssembly);
+		LoadAssembly("Resources/Scripts/Hydra-ScriptCore.dll");
 
 		if (s_Data->CoreAssemblyImage == nullptr)
 		{
@@ -249,11 +251,18 @@ namespace Hydra
 			return;
 		}
 
+		// Optional: the actual project's own script assembly (built from
+		// SandboxProject), referencing Hydra-ScriptCore. If it hasn't been
+		// built yet, LoadAppAssembly()/LoadAssemblyClasses() no-op gracefully
+		// and only the bare Hydra.Entity base class stays available.
+		LoadAppAssembly("SandboxProject/Assets/Scripts/Binaries/Sandbox.dll");
+		LoadAssemblyClasses();
+
 		ScriptGlue::RegisterComponents();
 		ScriptGlue::RegisterFunctions();
 
 		// Retrieve and instantiate class
-		s_Data->EntityClass = ScriptClass("Hydra", "Entity");
+		s_Data->EntityClass = ScriptClass("Hydra", "Entity", true);
 
 #if 0
 		MonoObject* instance = s_Data->EntityClass.Instantiate();
@@ -356,6 +365,16 @@ namespace Hydra
 		// Utils::PrintAssemblyTypes(s_Data->CoreAssembly);
 	}
 
+	void ScriptEngine::LoadAppAssembly(const std::filesystem::path& filepath)
+	{
+		s_Data->AppAssembly = Utils::LoadMonoAssembly(filepath);
+		if (s_Data->AppAssembly == nullptr)
+			return;
+
+		s_Data->AppAssemblyImage = mono_assembly_get_image(s_Data->AppAssembly);
+		// Utils::PrintAssemblyTypes(s_Data->AppAssembly);
+	}
+
 	void ScriptEngine::OnRuntimeStart(Scene* scene)
 	{
 		s_Data->SceneContext = scene;
@@ -403,37 +422,47 @@ namespace Hydra
 		return s_Data->EntityClasses;
 	}
 
-	void ScriptEngine::LoadAssemblyClasses(MonoAssembly* assembly)
+	void ScriptEngine::LoadAssemblyClasses()
 	{
 		s_Data->EntityClasses.clear();
 
-		MonoImage* image = mono_assembly_get_image(assembly);
-		const MonoTableInfo* typeDefinitionsTable = mono_image_get_table_info(image, MONO_TABLE_TYPEDEF);
+		if (s_Data->AppAssemblyImage == nullptr)
+		{
+			HD_CORE_WARN("ScriptEngine: no app script assembly loaded (SandboxProject not built yet?) - only Hydra.Entity is available");
+			return;
+		}
+
+		const MonoTableInfo* typeDefinitionsTable = mono_image_get_table_info(s_Data->AppAssemblyImage, MONO_TABLE_TYPEDEF);
 		int32_t numTypes = mono_table_info_get_rows(typeDefinitionsTable);
-		MonoClass* entityClass = mono_class_from_name(image, "Hydra", "Entity");
+		MonoClass* entityClass = mono_class_from_name(s_Data->CoreAssemblyImage, "Hydra", "Entity");
 
 		for (int32_t i = 0; i < numTypes; i++)
 		{
 			uint32_t cols[MONO_TYPEDEF_SIZE];
 			mono_metadata_decode_row(typeDefinitionsTable, i, cols, MONO_TYPEDEF_SIZE);
 
-			const char* nameSpace = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAMESPACE]);
-			const char* name = mono_metadata_string_heap(image, cols[MONO_TYPEDEF_NAME]);
+			const char* nameSpace = mono_metadata_string_heap(s_Data->AppAssemblyImage, cols[MONO_TYPEDEF_NAMESPACE]);
+			const char* name = mono_metadata_string_heap(s_Data->AppAssemblyImage, cols[MONO_TYPEDEF_NAME]);
 			std::string fullName;
 			if (strlen(nameSpace) != 0)
 				fullName = fmt::format("{}.{}", nameSpace, name);
 			else
 				fullName = name;
 
-			MonoClass* monoClass = mono_class_from_name(image, nameSpace, name);
+			MonoClass* monoClass = mono_class_from_name(s_Data->AppAssemblyImage, nameSpace, name);
 
 			if (monoClass == entityClass)
 				continue;
 
 			bool isEntity = mono_class_is_subclass_of(monoClass, entityClass, false);
 			if (isEntity)
+			{
 				s_Data->EntityClasses[fullName] = CreateRef<ScriptClass>(nameSpace, name);
+				HD_CORE_TRACE("ScriptEngine: found script class '{}'", fullName);
+			}
 		}
+
+		HD_CORE_INFO("ScriptEngine: {} script class(es) available", s_Data->EntityClasses.size());
 	}
 
 	MonoImage* ScriptEngine::GetCoreAssemblyImage()
@@ -443,6 +472,12 @@ namespace Hydra
 
 	MonoObject* ScriptEngine::InstantiateClass(MonoClass* monoClass)
 	{
+		if (monoClass == nullptr)
+		{
+			HD_CORE_ERROR("ScriptEngine: attempted to instantiate a null class");
+			return nullptr;
+		}
+
 		MonoObject* instance = mono_object_new(s_Data->AppDomain, monoClass);
 		if (instance == nullptr)
 		{
@@ -465,10 +500,17 @@ namespace Hydra
 		return instance;
 	}
 
-	ScriptClass::ScriptClass(const std::string& classNamespace, const std::string& className)
+	ScriptClass::ScriptClass(const std::string& classNamespace, const std::string& className, bool isCore)
 		: m_ClassNamespace(classNamespace), m_ClassName(className)
 	{
-		m_MonoClass = mono_class_from_name(s_Data->CoreAssemblyImage, classNamespace.c_str(), className.c_str());
+		MonoImage* image = isCore ? s_Data->CoreAssemblyImage : s_Data->AppAssemblyImage;
+		if (image == nullptr)
+		{
+			HD_CORE_ERROR("ScriptEngine: cannot look up {}.{} - {} assembly not loaded", classNamespace, className, isCore ? "core" : "app");
+			return;
+		}
+
+		m_MonoClass = mono_class_from_name(image, classNamespace.c_str(), className.c_str());
 	}
 
 	MonoObject* ScriptClass::Instantiate()
