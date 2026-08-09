@@ -145,7 +145,7 @@ namespace Hydra
 		
 		ImGuiTreeNodeFlags flags = ((m_SelectionContext == entity) ? ImGuiTreeNodeFlags_Selected : 0) 
 										| ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, tag.c_str());
+		bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
 		if (ImGui::IsItemClicked())
 		{
 			m_SelectionContext = entity;
@@ -163,7 +163,7 @@ namespace Hydra
 		if (opened)
 		{
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-			bool opened = ImGui::TreeNodeEx((void*)9817239, flags, tag.c_str());
+			bool opened = ImGui::TreeNodeEx((void*)9817239, flags, "%s", tag.c_str());
 			if (opened)
 				ImGui::TreePop();
 			ImGui::TreePop();
@@ -191,7 +191,7 @@ namespace Hydra
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
 			float lineHeight = ImGui::GetFrameHeight();
 			ImGui::Separator();
-			bool open = ImGui::TreeNodeEx((void*)typeid(T).hash_code(), treeNodeFlags, name.c_str());
+			bool open = ImGui::TreeNodeEx((void*)typeid(T).hash_code(), treeNodeFlags, "%s", name.c_str());
 			ImGui::PopStyleVar();
 			ImGui::SameLine(contentRegionAvailable.x - lineHeight * 0.5f);
 			
@@ -226,7 +226,7 @@ namespace Hydra
 
 			char buffer[256];
 			memset(buffer, 0, sizeof(buffer));
-			std::strncpy(buffer, tag.c_str(), sizeof(buffer));
+			strncpy(buffer, tag.c_str(), sizeof(buffer) - 1);
 			if (ImGui::InputText("##Tag", buffer, sizeof(buffer)))
 			{
 				tag = std::string(buffer);
@@ -324,12 +324,13 @@ namespace Hydra
 				}
 			});
 
-		DrawComponent<ScriptComponent>("Script", entity, [entity](auto& component) mutable
+		DrawComponent<ScriptComponent>("Script", entity, [entity, scene = m_Context](auto& component) mutable
 			{
 				bool scriptClassExists = ScriptEngine::EntityClassExists(component.ClassName);
 
 				static char buffer[64];
-				strcpy(buffer, component.ClassName.c_str());
+                memset(buffer, 0, sizeof(buffer));
+                strncpy(buffer, component.ClassName.c_str(), sizeof(buffer) - 1);
 
 				if (!scriptClassExists)
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.3f, 1.0f));
@@ -338,19 +339,62 @@ namespace Hydra
 					component.ClassName = buffer;
 
 				// Fields
-				Ref<ScriptInstance> scriptInstance = ScriptEngine::GetEntityScriptInstance(entity.GetUUID());
-				if (scriptInstance)
+				bool sceneRunning = scene->IsRunning();
+				if (sceneRunning)
 				{
-					const auto& fields = scriptInstance->GetScriptClass()->GetFields();
-
-					for (const auto& [name, field] : fields)
+					Ref<ScriptInstance> scriptInstance = ScriptEngine::GetEntityScriptInstance(entity.GetUUID());
+					if (scriptInstance)
 					{
-						if (field.Type == ScriptFieldType::Float)
+						const auto& fields = scriptInstance->GetScriptClass()->GetFields();
+						for (const auto& [name, field] : fields)
 						{
-							float data = scriptInstance->GetFieldValue<float>(name);
-							if (ImGui::DragFloat(name.c_str(), &data))
+							if (field.Type == ScriptFieldType::Float)
 							{
-								scriptInstance->SetFieldValue(name, data);
+								float data = scriptInstance->GetFieldValue<float>(name);
+								if (ImGui::DragFloat(name.c_str(), &data))
+								{
+									scriptInstance->SetFieldValue(name, data);
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					if (scriptClassExists)
+					{
+						Ref<ScriptClass> entityClass = ScriptEngine::GetEntityClass(component.ClassName);
+						const auto& fields = entityClass->GetFields();
+
+						auto& entityFields = ScriptEngine::GetScriptFieldMap(entity);
+						for (const auto& [name, field] : fields)
+						{
+							// Field has been set in editor
+							if (entityFields.find(name) != entityFields.end())
+							{
+								ScriptFieldInstance& scriptField = entityFields.at(name);
+
+								// Display control to set it maybe
+								if (field.Type == ScriptFieldType::Float)
+								{
+									float data = scriptField.GetValue<float>();
+									if (ImGui::DragFloat(name.c_str(), &data))
+										scriptField.SetValue(data);
+								}
+							}
+							else
+							{
+								// Display control to set it maybe
+								if (field.Type == ScriptFieldType::Float)
+								{
+									float data = 0.0f;
+									if (ImGui::DragFloat(name.c_str(), &data))
+									{
+										ScriptFieldInstance& fieldInstance = entityFields[name];
+										fieldInstance.Field = field;
+										fieldInstance.SetValue(data);
+									}
+								}
 							}
 						}
 					}
