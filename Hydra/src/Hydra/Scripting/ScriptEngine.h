@@ -51,14 +51,14 @@ namespace Hydra
 		template<typename T>
 		T GetValue()
 		{
-			static_assert(sizeof(T) <= 10, "Type too large!");
+			static_assert(sizeof(T) <= 16, "Type too large!");
 			return *(T*)m_Buffer;
 		}
 
 		template<typename T>
 		void SetValue(T value)
 		{
-			static_assert(sizeof(T) <= 10, "Type too large!");
+			static_assert(sizeof(T) <= 16, "Type too large!");
 			memcpy(m_Buffer, &value, sizeof(T));
 		}
 	private:

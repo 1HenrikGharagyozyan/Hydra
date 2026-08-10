@@ -3,8 +3,8 @@
 
 #include "Entity.h"
 #include "Components.h"
-#include "Hazel/Scripting/ScriptEngine.h"
-#include "Hazel/Core/UUID.h"
+#include "Hydra/Scripting/ScriptEngine.h"
+#include "Hydra/Core/UUID.h"
 
 #include <fstream>
 
@@ -90,16 +90,16 @@ namespace YAML
 	};
 
 	template<>
-	struct convert<Hazel::UUID>
+	struct convert<Hydra::UUID>
 	{
-		static Node encode(const Hazel::UUID& uuid)
+		static Node encode(const Hydra::UUID& uuid)
 		{
 			Node node;
 			node.push_back((uint64_t)uuid);
 			return node;
 		}
 
-		static bool decode(const Node& node, Hazel::UUID& uuid)
+		static bool decode(const Node& node, Hydra::UUID& uuid)
 		{
 			uuid = node.as<uint64_t>();
 			return true;
@@ -539,7 +539,7 @@ namespace Hydra
 
 							ScriptFieldInstance& fieldInstance = entityFields[name];
 							
-							// TODO(Yan): turn this assert into Hazelnut log warning
+							// TODO(Yan): turn this assert into Hydranut log warning
 							HD_CORE_ASSERT(fields.find(name) != fields.end());
 
 							if (fields.find(name) == fields.end())
